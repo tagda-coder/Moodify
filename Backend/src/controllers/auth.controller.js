@@ -3,7 +3,7 @@ const User = require("../models/user.model");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const Joi = require("joi");
-
+const redis = require("../config/cache");
 // SIGNUP LOGIC
 exports.signup = async (req, res) => {
   // Validate incoming request data
@@ -77,7 +77,7 @@ exports.signup = async (req, res) => {
       token: token,
       user: userResponse,
     });
-  } catch (error) { 
+  } catch (error) {
     // Log error for debugging purposes
     console.error("Signup error:", error);
     // Send generic error message to client
@@ -145,6 +145,25 @@ exports.login = async (req, res) => {
     console.error("Login error:", error);
     return res.status(500).json({
       Message: "Login failed. Please try again",
+    });
+  }
+};
+
+// LOGOUT LOGIC
+exports.logout = async (req, res) => {
+  try {
+    const token = req.cookies.token;
+    // Blacklisting token using Redis
+    await redis.set(token, Date.now().toString(), "EX", 24 * 60 * 60); // Set token with 1 day expiration
+    return res.status(200).json({
+      message: "Logout Successfully",
+      status: "success",
+    });
+  } catch (error) {
+    return res.status(500).json({
+      message: "Logout failed. Please try again",
+      error: error.message,
+      status: "failed",
     });
   }
 };
